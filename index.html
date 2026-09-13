@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>道東ビンゴ</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 30px 20px;
+            background: #111;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 5px;
+            font-size: 36px;
+            letter-spacing: 3px;
+        }
+
+        .subtitle {
+            margin-bottom: 30px;
+            color: #aaa;
+            font-size: 14px;
+            letter-spacing: 2px;
+        }
+
+        .bingo-board {
+            display: grid;
+
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+
+            width: min(600px, 90vw);
+            aspect-ratio: 1 / 1;
+
+            margin: 0 auto;
+
+            border: 4px solid white;
+        }
+
+        .bingo-cell {
+            border: 2px solid white;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            text-align: center;
+
+            font-size: clamp(12px, 3vw, 18px);
+            font-weight: bold;
+
+            background-size: cover;
+            background-position: center;
+
+            cursor: pointer;
+
+            transition: 0.2s;
+        }
+
+        .bingo-cell:hover {
+            transform: scale(1.03);
+            background-color: #333;
+        }
+        /* BINGO画面 */
+
+#bingo-overlay {
+    position: fixed;
+
+    top: 0;
+    left: 0;
+
+    width: 100%;
+    height: 100%;
+
+    background: rgba(0, 0, 0, 0.9);
+
+    display: none;
+
+    justify-content: center;
+    align-items: center;
+
+    z-index: 9999;
+}
+
+.bingo-message {
+    text-align: center;
+}
+
+.bingo-emoji {
+    font-size: 70px;
+}
+
+.bingo-title {
+    font-size: 80px;
+    font-weight: bold;
+    letter-spacing: 8px;
+
+    animation: bingoPop 0.6s ease-out;
+}
+
+.bingo-subtitle {
+    margin-top: 10px;
+
+    font-size: 20px;
+    letter-spacing: 5px;
+
+    color: #aaa;
+}
+
+.bingo-message button {
+    margin-top: 40px;
+
+    padding: 12px 35px;
+
+    font-size: 18px;
+    font-weight: bold;
+
+    background: white;
+    color: black;
+
+    border: none;
+    border-radius: 5px;
+
+    cursor: pointer;
+}
+
+        .bingo-message button:hover {
+            transform: scale(1.05);
+        }
+
+
+        /* BINGO文字がドーンと出る */
+
+        @keyframes bingoPop {
+
+            0% {
+                transform: scale(0.2);
+                opacity: 0;
+            }
+
+            70% {
+                transform: scale(1.15);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1);
+            }
+
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>道東ビンゴ</h1>
+    <div class="subtitle">
+        EAST HOKKAIDO MISSION
+    </div>
+
+    <div class="bingo-board">
+
+        <div class="bingo-cell" onclick="selectPhoto(this)">
+            野生動物を見つける
+        </div>
+
+        <div class="bingo-cell" onclick="selectPhoto(this)">
+            流れ星を見つける
+        </div>
+
+        <div class="bingo-cell" onclick="selectPhoto(this)">
+            ご当地グルメを食べる
+        </div>
+
+        <div class="bingo-cell" onclick="selectPhoto(this)">
+            絶景を見る
+        </div>
+
+        <div class="bingo-cell" onclick="selectPhoto(this)">
+            キツネを見つける
+        </div>
+
+        <div class="bingo-cell" onclick="selectPhoto(this)">
+            予定外の場所へ行く
+        </div>
+
+        <div class="bingo-cell" onclick="selectPhoto(this)">
+            温泉に入る
+        </div>
+
+        <div class="bingo-cell" onclick="selectPhoto(this)">
+            二人で記念写真
+        </div>
+
+        <div class="bingo-cell" onclick="selectPhoto(this)">
+            一番星を見つける
+        </div>
+
+    </div>
+     <!-- BINGO画面 -->
+    <div id="bingo-overlay">
+
+        <div class="bingo-message">
+            <div class="bingo-emoji">🎉</div>
+
+            <div class="bingo-title">
+                BINGO!!
+            </div>
+
+            <div class="bingo-subtitle">
+                MISSION COMPLETE
+            </div>
+
+            <button onclick="closeBingo()">
+                閉じる
+            </button>
+        </div>
+
+    </div>
+
+   <script>
+
+    // 写真を選択する
+    function selectPhoto(cell) {
+
+        const input = document.createElement("input");
+
+        input.type = "file";
+        input.accept = "image/*";
+
+        input.onchange = function(event) {
+
+            const file = event.target.files[0];
+
+            if (!file) {
+                return;
+            }
+
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+
+                const imageData = e.target.result;
+
+                // 写真を表示
+                cell.style.backgroundImage =
+                    `url("${imageData}")`;
+
+                // 完了表示
+                cell.innerHTML = "✓ COMPLETE";
+
+                // マス番号を取得
+                const cells =
+                    document.querySelectorAll(".bingo-cell");
+
+                const index =
+                    Array.from(cells).indexOf(cell);
+
+                // 写真を保存
+                localStorage.setItem(
+                    "bingo-photo-" + index,
+                    imageData
+                );
+
+                // BINGO判定
+                checkBingo();
+
+            };
+
+            reader.readAsDataURL(file);
+        };
+
+        input.click();
+    }
+
+
+    // BINGOかどうか確認する
+    function checkBingo() {
+
+        const cells =
+            document.querySelectorAll(".bingo-cell");
+
+        // クリアしたマスを調べる
+        const completed = [];
+
+        cells.forEach(function(cell) {
+
+            completed.push(
+                cell.innerHTML.includes("COMPLETE")
+            );
+
+        });
+
+
+        // 横3列
+        const lines = [
+
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+
+            // 縦3列
+            [0, 3, 6],
+            [1, 4, 7],
+            [2, 5, 8],
+
+            // 斜め2列
+            [0, 4, 8],
+            [2, 4, 6]
+
+        ];
+
+
+        // どれか1列完成しているか？
+        for (const line of lines) {
+
+            if (
+                completed[line[0]] &&
+                completed[line[1]] &&
+                completed[line[2]]
+            ) {
+
+                showBingo();
+                return;
+
+            }
+
+        }
+
+    }
+
+
+    // BINGO演出
+    function showBingo() {
+
+        document.getElementById("bingo-overlay").style.display =
+            "flex";
+
+    }
+
+
+    // ページを開いたときに写真を復元
+    window.addEventListener("load", function() {
+
+        const cells =
+            document.querySelectorAll(".bingo-cell");
+
+        cells.forEach(function(cell, index) {
+
+            const savedImage =
+                localStorage.getItem(
+                    "bingo-photo-" + index
+                );
+
+            if (savedImage) {
+
+                cell.style.backgroundImage =
+                    `url("${savedImage}")`;
+
+                cell.innerHTML = "✓ COMPLETE";
+
+            }
+
+        });
+
+        // 復元した状態でもBINGO判定
+        checkBingo();
+
+    });
+    function closeBingo() {
+
+    document.getElementById("bingo-overlay").style.display =
+        "none";
+
+}
+</script>
+
+</body>
+
+</html>
