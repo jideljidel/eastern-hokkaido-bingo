@@ -69,66 +69,68 @@
         }
         /* BINGO画面 */
 
-#bingo-overlay {
-    position: fixed;
+        #bingo-overlay {
+            position: fixed;
 
-    top: 0;
-    left: 0;
+            top: 0;
+            left: 0;
 
-    width: 100%;
-    height: 100%;
+            width: 100%;
+            height: 100%;
 
-    background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.9);
 
-    display: none;
+            display: none;
 
-    justify-content: center;
-    align-items: center;
+            justify-content: center;
+            align-items: center;
 
-    z-index: 9999;
-}
+            z-index: 9999;
+        }
 
-.bingo-message {
-    text-align: center;
-}
+        
 
-.bingo-emoji {
-    font-size: 70px;
-}
+        .bingo-message {
+            text-align: center;
+        }
 
-.bingo-title {
-    font-size: 80px;
-    font-weight: bold;
-    letter-spacing: 8px;
+        .bingo-emoji {
+            font-size: 70px;
+        }
 
-    animation: bingoPop 0.6s ease-out;
-}
+        .bingo-title {
+            font-size: 80px;
+            font-weight: bold;
+            letter-spacing: 8px;
 
-.bingo-subtitle {
-    margin-top: 10px;
+            animation: bingoPop 0.6s ease-out;
+        }
 
-    font-size: 20px;
-    letter-spacing: 5px;
+        .bingo-subtitle {
+            margin-top: 10px;
 
-    color: #aaa;
-}
+            font-size: 20px;
+            letter-spacing: 5px;
 
-.bingo-message button {
-    margin-top: 40px;
+            color: #aaa;
+        }
 
-    padding: 12px 35px;
+        .bingo-message button {
+            margin-top: 40px;
 
-    font-size: 18px;
-    font-weight: bold;
+            padding: 12px 35px;
 
-    background: white;
-    color: black;
+            font-size: 18px;
+            font-weight: bold;
 
-    border: none;
-    border-radius: 5px;
+            background: white;
+            color: black;
 
-    cursor: pointer;
-}
+            border: none;
+            border-radius: 5px;
+
+            cursor: pointer;
+        }
 
         .bingo-message button:hover {
             transform: scale(1.05);
@@ -154,6 +156,54 @@
             }
 
         }
+
+        /* 写真拡大画面 */
+        #photo-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .photo-viewer {
+            width: 90%;
+            max-width: 700px;
+            text-align: center;
+        }
+
+        #large-photo {
+            max-width: 100%;
+            max-height: 75vh;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .photo-buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .photo-buttons button {
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .photo-buttons button:hover {
+            transform: scale(1.05);
+        }
+
     </style>
 </head>
 
@@ -242,208 +292,266 @@
 
     </div>
 
+        <!-- 写真拡大画面 -->
+    <div id="photo-overlay">
+        <div class="photo-viewer">
+            <img id="large-photo" src="" alt="拡大写真">
+
+            <div class="photo-buttons">
+                <button onclick="downloadPhoto()">保存</button>
+                <button onclick="closePhoto()">閉じる</button>
+            </div>
+        </div>
+    </div>
+
    <script>
 
-    // 写真を選択する
-    function selectPhoto(cell) {
+        // 写真を選択する
+        function selectPhoto(cell) {
 
-        const input = document.createElement("input");
+            const cells = document.querySelectorAll(".bingo-cell");
+            const index = Array.from(cells).indexOf(cell);
 
-        input.type = "file";
-        input.accept = "image/*";
+            // すでに写真が入っている場合
+            const savedImage = localStorage.getItem("bingo-photo-" + index);
 
-        input.onchange = function(event) {
-
-            const file = event.target.files[0];
-
-            if (!file) {
+            if (savedImage) {
+                openPhoto(savedImage, index);
                 return;
             }
 
-            const reader = new FileReader();
+            // 写真が入っていない場合はアップロード
+            const input = document.createElement("input");
 
-            reader.onload = function(e) {
+            input.type = "file";
+            input.accept = "image/*";
 
-                const imageData = e.target.result;
+            input.onchange = function(event) {
 
-                // 写真を表示
-                cell.style.backgroundImage =
-                    `url("${imageData}")`;
+                const file = event.target.files[0];
 
-                // 完了表示
-                cell.innerHTML = "✓ COMPLETE";
+                if (!file) {
+                    return;
+                }
 
-                // マス番号を取得
-                const cells =
-                    document.querySelectorAll(".bingo-cell");
+                const reader = new FileReader();
 
-                const index =
-                    Array.from(cells).indexOf(cell);
+                reader.onload = function(e) {
 
-                // 写真を保存
-                localStorage.setItem(
-                    "bingo-photo-" + index,
-                    imageData
-                );
+                    const imageData = e.target.result;
 
-                // BINGO判定
-                checkBingo();
+                    cell.style.backgroundImage =
+                        `url("${imageData}")`;
 
+                    cell.innerHTML = "✓ COMPLETE";
+
+                    localStorage.setItem(
+                        "bingo-photo-" + index,
+                        imageData
+                    );
+
+                    checkBingo();
+                };
+
+                reader.readAsDataURL(file);
             };
 
-            reader.readAsDataURL(file);
-        };
-
-        input.click();
-    }
+            input.click();
+        }
 
 
-    // BINGOかどうか確認する
-    function checkBingo() {
+        // BINGOかどうか確認する
+        function checkBingo() {
 
-        const cells =
-            document.querySelectorAll(".bingo-cell");
+            const cells =
+                document.querySelectorAll(".bingo-cell");
 
-        // クリアしたマスを調べる
-        const completed = [];
+            // クリアしたマスを調べる
+            const completed = [];
 
-        cells.forEach(function(cell) {
+            cells.forEach(function(cell) {
 
-            completed.push(
-                cell.innerHTML.includes("COMPLETE")
-            );
+                completed.push(
+                    cell.innerHTML.includes("COMPLETE")
+                );
 
-        });
-
-
-        // 横3列
-        const lines = [
-
-            [0, 1, 2],
-            [3, 4, 5],
-            [6, 7, 8],
-
-            // 縦3列
-            [0, 3, 6],
-            [1, 4, 7],
-            [2, 5, 8],
-
-            // 斜め2列
-            [0, 4, 8],
-            [2, 4, 6]
-
-        ];
+            });
 
 
-        // どれか1列完成しているか？
-        for (const line of lines) {
+            // 横3列
+            const lines = [
 
-            if (
-                completed[line[0]] &&
-                completed[line[1]] &&
-                completed[line[2]]
-            ) {
+                [0, 1, 2],
+                [3, 4, 5],
+                [6, 7, 8],
 
-                showBingo();
-                return;
+                // 縦3列
+                [0, 3, 6],
+                [1, 4, 7],
+                [2, 5, 8],
+
+                // 斜め2列
+                [0, 4, 8],
+                [2, 4, 6]
+
+            ];
+
+
+            // どれか1列完成しているか？
+            for (const line of lines) {
+
+                if (
+                    completed[line[0]] &&
+                    completed[line[1]] &&
+                    completed[line[2]]
+                ) {
+
+                    showBingo();
+                    return;
+
+                }
 
             }
 
         }
 
-    }
+
+        // BINGO演出
+        function showBingo() {
+
+            document.getElementById("bingo-overlay").style.display =
+                "flex";
+
+        }
 
 
-    // BINGO演出
-    function showBingo() {
+        // ページを開いたときに写真を復元
+        window.addEventListener("load", function() {
 
-        document.getElementById("bingo-overlay").style.display =
-            "flex";
+            const cells =
+                document.querySelectorAll(".bingo-cell");
 
-    }
+            cells.forEach(function(cell, index) {
 
+                const savedImage =
+                    localStorage.getItem(
+                        "bingo-photo-" + index
+                    );
 
-    // ページを開いたときに写真を復元
-    window.addEventListener("load", function() {
+                if (savedImage) {
 
-        const cells =
-            document.querySelectorAll(".bingo-cell");
+                    cell.style.backgroundImage =
+                        `url("${savedImage}")`;
 
-        cells.forEach(function(cell, index) {
+                    cell.innerHTML = "✓ COMPLETE";
 
-            const savedImage =
-                localStorage.getItem(
-                    "bingo-photo-" + index
-                );
+                }
 
-            if (savedImage) {
+            });
 
-                cell.style.backgroundImage =
-                    `url("${savedImage}")`;
+            // 復元した状態でもBINGO判定
+            checkBingo();
 
-                cell.innerHTML = "✓ COMPLETE";
+        });
+        function closeBingo() {
 
-            }
+            document.getElementById("bingo-overlay").style.display =
+                "none";
+
+        }
+        
+        let pressTimer;
+
+        document.querySelectorAll(".bingo-cell").forEach(function(cell) {
+
+            cell.addEventListener("touchstart", function() {
+                pressTimer = setTimeout(function() {
+                    deletePhoto(cell);
+                }, 800);
+            });
+
+            cell.addEventListener("touchend", function() {
+                clearTimeout(pressTimer);
+            });
+
+            cell.addEventListener("mousedown", function() {
+                pressTimer = setTimeout(function() {
+                    deletePhoto(cell);
+                }, 800);
+            });
+
+            cell.addEventListener("mouseup", function() {
+                clearTimeout(pressTimer);
+            });
 
         });
 
-        // 復元した状態でもBINGO判定
-        checkBingo();
+        function deletePhoto(cell) {
+            const cells = document.querySelectorAll(".bingo-cell");
+            const index = Array.from(cells).indexOf(cell);
 
-    });
-    function closeBingo() {
+            const savedImage = localStorage.getItem("bingo-photo-" + index);
 
-    document.getElementById("bingo-overlay").style.display =
-        "none";
+            if (!savedImage) {
+                return;
+            }
 
-}
-let pressTimer;
+            const result = confirm("この写真を削除する？");
 
-document.querySelectorAll(".bingo-cell").forEach(function(cell) {
+            if (!result) {
+                return;
+            }
 
-    cell.addEventListener("touchstart", function() {
-        pressTimer = setTimeout(function() {
-            deletePhoto(cell);
-        }, 800);
-    });
+            localStorage.removeItem("bingo-photo-" + index);
 
-    cell.addEventListener("touchend", function() {
-        clearTimeout(pressTimer);
-    });
+            cell.style.backgroundImage = "";
+            cell.innerHTML = cell.dataset.mission;
+        }
 
-    cell.addEventListener("mousedown", function() {
-        pressTimer = setTimeout(function() {
-            deletePhoto(cell);
-        }, 800);
-    });
+        let currentPhoto = "";
+        let currentPhotoIndex = null;
 
-    cell.addEventListener("mouseup", function() {
-        clearTimeout(pressTimer);
-    });
+        function openPhoto(imageData, index) {
 
-});
+            currentPhoto = imageData;
+            currentPhotoIndex = index;
 
-function deletePhoto(cell) {
-    const cells = document.querySelectorAll(".bingo-cell");
-    const index = Array.from(cells).indexOf(cell);
+            const image = document.getElementById("large-photo");
 
-    const savedImage = localStorage.getItem("bingo-photo-" + index);
+            image.src = imageData;
 
-    if (!savedImage) {
-        return;
-    }
+            document.getElementById("photo-overlay").style.display = "flex";
+        }
 
-    const result = confirm("この写真を削除する？");
+        function closePhoto() {
 
-    if (!result) {
-        return;
-    }
+            document.getElementById("photo-overlay").style.display = "none";
 
-    localStorage.removeItem("bingo-photo-" + index);
+            currentPhoto = "";
+            currentPhotoIndex = null;
+        }
 
-    cell.style.backgroundImage = "";
-    cell.innerHTML = cell.dataset.mission;
-}
+        function downloadPhoto() {
+
+            if (!currentPhoto) {
+                return;
+            }
+
+            const link = document.createElement("a");
+
+            link.href = currentPhoto;
+            link.download =
+                "eastern-hokkaido-bingo-" +
+                (currentPhotoIndex + 1) +
+                ".jpg";
+
+            document.body.appendChild(link);
+
+            link.click();
+
+            document.body.removeChild(link);
+        }
+
 </script>
 
 </body>
