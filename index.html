@@ -166,39 +166,57 @@
 
     <div class="bingo-board">
 
-        <div class="bingo-cell" onclick="selectPhoto(this)">
+        <div class="bingo-cell" 
+            data-mission="野生動物を見つける"
+            onclick="selectPhoto(this)">
             野生動物を見つける
         </div>
 
-        <div class="bingo-cell" onclick="selectPhoto(this)">
+        <div class="bingo-cell" 
+            data-mission="ハーベスターを探せ"
+            onclick="selectPhoto(this)">
             ハーベスターを探せ
         </div>
 
-        <div class="bingo-cell" onclick="selectPhoto(this)">
+        <div class="bingo-cell" 
+            data-mission="アオカンで100km以上の場所を見つける"
+            onclick="selectPhoto(this)">
             アオカンで100km以上の場所を見つける
         </div>
 
-        <div class="bingo-cell" onclick="selectPhoto(this)">
+        <div class="bingo-cell" 
+            data-mission="斜里岳を見つける"
+            onclick="selectPhoto(this)">
             斜里岳を見つける
         </div>
 
-        <div class="bingo-cell" onclick="selectPhoto(this)">
+        <div class="bingo-cell" 
+            data-mission="斜里岳を見つける"
+            onclick="selectPhoto(this)">
             鹿注意看板を見つける
         </div>
 
-        <div class="bingo-cell" onclick="selectPhoto(this)">
+        <div class="bingo-cell" 
+            data-mission="セルフスタンドに挑戦"
+            onclick="selectPhoto(this)">
             セルフスタンドに挑戦
         </div>
 
-        <div class="bingo-cell" onclick="selectPhoto(this)">
+        <div class="bingo-cell" 
+            data-mission="美空ひばりを見つける"
+            onclick="selectPhoto(this)">
             美空ひばりを見つける
         </div>
 
-        <div class="bingo-cell" onclick="selectPhoto(this)">
+        <div class="bingo-cell" 
+            data-mission="牛注意看板を見つける"
+            onclick="selectPhoto(this)">
             牛注意看板を見つける
         </div>
 
-        <div class="bingo-cell" onclick="selectPhoto(this)">
+        <div class="bingo-cell" 
+            data-mission="道東らしいお土産を買う"
+            onclick="selectPhoto(this)">
             道東らしいお土産を買う
         </div>
 
@@ -378,6 +396,53 @@
     document.getElementById("bingo-overlay").style.display =
         "none";
 
+}
+let pressTimer;
+
+document.querySelectorAll(".bingo-cell").forEach(function(cell) {
+
+    cell.addEventListener("touchstart", function() {
+        pressTimer = setTimeout(function() {
+            deletePhoto(cell);
+        }, 800);
+    });
+
+    cell.addEventListener("touchend", function() {
+        clearTimeout(pressTimer);
+    });
+
+    cell.addEventListener("mousedown", function() {
+        pressTimer = setTimeout(function() {
+            deletePhoto(cell);
+        }, 800);
+    });
+
+    cell.addEventListener("mouseup", function() {
+        clearTimeout(pressTimer);
+    });
+
+});
+
+function deletePhoto(cell) {
+    const cells = document.querySelectorAll(".bingo-cell");
+    const index = Array.from(cells).indexOf(cell);
+
+    const savedImage = localStorage.getItem("bingo-photo-" + index);
+
+    if (!savedImage) {
+        return;
+    }
+
+    const result = confirm("この写真を削除する？");
+
+    if (!result) {
+        return;
+    }
+
+    localStorage.removeItem("bingo-photo-" + index);
+
+    cell.style.backgroundImage = "";
+    cell.innerHTML = cell.dataset.mission;
 }
 </script>
 
