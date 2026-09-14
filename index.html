@@ -241,7 +241,7 @@
         </div>
 
         <div class="bingo-cell" 
-            data-mission="斜里岳を見つける"
+            data-mission="鹿注意看板を見つける"
             onclick="selectPhoto(this)">
             鹿注意看板を見つける
         </div>
@@ -304,29 +304,34 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
    <script>
+        const SUPABASE_URL = "https://pdeqknibhyyqnzeluooe.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_s4F3l-ZKKntC-yKzD5dwmQ_WWeH3qbN";
+
+        const supabaseClient = supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_KEY
+        );
 
         // 写真を選択する
-        function selectPhoto(cell) {
+        async function selectPhoto(cell) {
 
             const cells = document.querySelectorAll(".bingo-cell");
             const index = Array.from(cells).indexOf(cell);
 
-            // すでに写真が入っている場合
-            const savedImage = localStorage.getItem("bingo-photo-" + index);
-
-            if (savedImage) {
-                openPhoto(savedImage, index);
+            // すでに写真が入っている場合は拡大表示
+            if (cell.dataset.imageUrl) {
+                openPhoto(cell.dataset.imageUrl, index);
                 return;
             }
 
-            // 写真が入っていない場合はアップロード
             const input = document.createElement("input");
-
             input.type = "file";
             input.accept = "image/*";
 
-            input.onchange = function(event) {
+            input.onchange = async function(event) {
 
                 const file = event.target.files[0];
 
@@ -334,26 +339,80 @@
                     return;
                 }
 
-                const reader = new FileReader();
+                try {
 
-                reader.onload = function(e) {
+                    // マスごとに固定のファイル名を使う
+                    const filePath = "cell-" + index;
 
-                    const imageData = e.target.result;
+                    // Supabase Storageへアップロード
+                    const { error: uploadError } =
+                        await supabaseClient.storage
+                            .from("bingo-photos")
+                            .upload(
+                                filePath,
+                                file,
+                                {
+                                    upsert: true,
+                                    contentType: file.type
+                                }
+                            );
 
+                    if (uploadError) {
+                        throw uploadError;
+                    }
+
+                    // 公開URLを取得
+                    const { data: publicUrlData } =
+                        supabaseClient.storage
+                            .from("bingo-photos")
+                            .getPublicUrl(filePath);
+
+                    const imageUrl =
+                        publicUrlData.publicUrl + "?t=" + Date.now();
+
+                    // 同じマスの古いDB情報を消す
+                    const { error: deleteError } =
+                        await supabaseClient
+                            .from("bingo_cells")
+                            .delete()
+                            .eq("cell_index", index);
+
+                    if (deleteError) {
+                        throw deleteError;
+                    }
+
+                    // 新しい情報をDBへ登録
+                    const { error: insertError } =
+                        await supabaseClient
+                            .from("bingo_cells")
+                            .insert({
+                                cell_index: index,
+                                image_url: imageUrl
+                            });
+
+                    if (insertError) {
+                        throw insertError;
+                    }
+
+                    // 画面へ反映
                     cell.style.backgroundImage =
-                        `url("${imageData}")`;
+                        `url("${imageUrl}")`;
 
                     cell.innerHTML = "✓ COMPLETE";
 
-                    localStorage.setItem(
-                        "bingo-photo-" + index,
-                        imageData
-                    );
+                    cell.dataset.imageUrl = imageUrl;
 
                     checkBingo();
-                };
 
-                reader.readAsDataURL(file);
+                } catch (error) {
+
+                    console.error(error);
+
+                    alert(
+                        "写真のアップロードに失敗したぜ。\n\n" +
+                        error.message
+                    );
+                }
             };
 
             input.click();
@@ -426,33 +485,53 @@
 
 
         // ページを開いたときに写真を復元
-        window.addEventListener("load", function() {
+        window.addEventListener("load", async function() {
 
             const cells =
                 document.querySelectorAll(".bingo-cell");
 
-            cells.forEach(function(cell, index) {
+            try {
 
-                const savedImage =
-                    localStorage.getItem(
-                        "bingo-photo-" + index
-                    );
+                const { data, error } =
+                    await supabaseClient
+                        .from("bingo_cells")
+                        .select("*");
 
-                if (savedImage) {
+                if (error) {
+                    throw error;
+                }
+
+                data.forEach(function(row) {
+
+                    const cell = cells[row.cell_index];
+
+                    if (!cell) {
+                        return;
+                    }
 
                     cell.style.backgroundImage =
-                        `url("${savedImage}")`;
+                        `url("${row.image_url}")`;
 
                     cell.innerHTML = "✓ COMPLETE";
 
-                }
+                    cell.dataset.imageUrl =
+                        row.image_url;
+                });
 
-            });
+                checkBingo();
 
-            // 復元した状態でもBINGO判定
-            checkBingo();
+            } catch (error) {
 
+                console.error(error);
+
+                alert(
+                    "ビンゴデータの読み込みに失敗したぜ。\n\n" +
+                    error.message
+                );
+            }
         });
+
+
         function closeBingo() {
 
             document.getElementById("bingo-overlay").style.display =
@@ -486,26 +565,67 @@
 
         });
 
-        function deletePhoto(cell) {
-            const cells = document.querySelectorAll(".bingo-cell");
-            const index = Array.from(cells).indexOf(cell);
+        async function deletePhoto(cell) {
 
-            const savedImage = localStorage.getItem("bingo-photo-" + index);
+            const cells =
+                document.querySelectorAll(".bingo-cell");
 
-            if (!savedImage) {
+            const index =
+                Array.from(cells).indexOf(cell);
+
+            if (!cell.dataset.imageUrl) {
                 return;
             }
 
-            const result = confirm("この写真を削除する？");
+            const result =
+                confirm("この写真を削除する？");
 
             if (!result) {
                 return;
             }
 
-            localStorage.removeItem("bingo-photo-" + index);
+            try {
 
-            cell.style.backgroundImage = "";
-            cell.innerHTML = cell.dataset.mission;
+                const filePath =
+                    "cell-" + index;
+
+                // Storageから写真削除
+                const { error: storageError } =
+                    await supabaseClient.storage
+                        .from("bingo-photos")
+                        .remove([filePath]);
+
+                if (storageError) {
+                    throw storageError;
+                }
+
+                // DBから情報削除
+                const { error: databaseError } =
+                    await supabaseClient
+                        .from("bingo_cells")
+                        .delete()
+                        .eq("cell_index", index);
+
+                if (databaseError) {
+                    throw databaseError;
+                }
+
+                cell.style.backgroundImage = "";
+
+                cell.innerHTML =
+                    cell.dataset.mission;
+
+                delete cell.dataset.imageUrl;
+
+            } catch (error) {
+
+                console.error(error);
+
+                alert(
+                    "写真の削除に失敗したぜ。\n\n" +
+                    error.message
+                );
+            }
         }
 
         let currentPhoto = "";
